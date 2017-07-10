@@ -43,6 +43,9 @@ class Bayes(object):
         return '_Bayes::stemCount:' + stem
     
     def __tokenize(self,text):
+        """
+        tokenize word and find the unique character
+        """
         text = text.lower()
         text = re.sub('/\W/g',' ',text)
         text = re.sub('/\s+/g',' ',text)
@@ -52,6 +55,9 @@ class Bayes(object):
         return text
     
     def getLabels(self):
+        """
+        get the label and turn them to list
+        """"
         key ='_Bayes::registeredLabels' 
         
         
@@ -63,7 +69,7 @@ class Bayes(object):
            
         label = label.split(',')
         
-        label = filter(lambda x:len(x),label)
+        label = filter(lambda x:len(x),label)#make it return empty list if no label found
         
         self.lab +=label
         return self.lab
@@ -71,7 +77,9 @@ class Bayes(object):
         
     
     def __registerLabel(self,label):
-            
+        """
+        check if label exist if not registered the label
+        """
         labels = self.getLabels()
         
         if label not in labels:
@@ -87,6 +95,9 @@ class Bayes(object):
         return labels
     
     def __stemLabelCount(self,stem,label):
+        """
+        count the number of time a word with a particular label occur
+        """
         count = 0
         key =self.__stemKey(stem,label) 
         if key in self.localstorage.keys():
@@ -98,6 +109,9 @@ class Bayes(object):
         return count
     
     def __stemInverseLabelCount(self,stem,label):
+        """
+        count the number of time a word does not occur
+        """
         labels = self.getLabels()
         total = 0
         
@@ -121,6 +135,9 @@ class Bayes(object):
         return count
     
     def __docCount(self,label):
+        """
+        count how many document a label have
+        """
         count = 0
         key = self.__docCountKey(label)
         if key in self.localstorage.keys():
@@ -143,6 +160,10 @@ class Bayes(object):
         return total
     
     def __increment(self,key):
+        """
+        check if key and word are seen before
+        if seen increment the count
+        """
         count = 0
         if key in self.localstorage.keys():
             count = int(self.localstorage[key])
@@ -163,6 +184,13 @@ class Bayes(object):
     
         
     def train(self,text,label):
+        """
+        train the label
+        text: document to be trained
+        label:the document label
+        we rigistered the the label and store them in the localstorage
+        if seen before it is incremented
+        """
         self.__registerLabel(label)
         words = self.__tokenize(text)
         length = len(words)
@@ -172,6 +200,9 @@ class Bayes(object):
         self.__incrementDocCount(label)
         
     def guess(self,text):
+        """
+        take a document and geuss the label
+        """
         words = self.__tokenize(text)
         length = len(words)
         labels = self.getLabels()
@@ -190,7 +221,7 @@ class Bayes(object):
         for j in range(len(labels)):
             label = labels[j]
             logsum =0
-            labelProbability[label] = (docCounts[label] / totalDocCount) if totalDocCount!=0 else 0
+            labelProbability[label] = (docCounts[label] / totalDocCount) if totalDocCount!=0 else 0 #to prevent zerodivision error
             
             for i in range(length):
                 word = words[i]
@@ -201,20 +232,23 @@ class Bayes(object):
                     
                     wordProbability = self.__stemLabelCount(word,label)
                     wordInverseProbability =self.__stemInverseLabelCount(word,label) / docInverseCounts[label]
-                    wordicity = wordProbability / (wordProbability + wordInverseProbability)
+                    wordicity = wordProbability / (wordProbability + wordInverseProbability)#bayes p{A|B}=P(A)P{B|A}/(P(A)P{B|A}+P(A')P{B|A'})
                     
-                    wordicity =((1 * 0.5) + (_stemTotalCount * wordicity))/(1 + _stemTotalCount)
+                    wordicity =((1 * 0.5) + (_stemTotalCount * wordicity))/(1 + _stemTotalCount)#the '1' is the weight it should have been an input
             
                     if wordicity ==0:
                         wordicity = 0.01
                     elif wordicity ==1:
                         wordicity =0.99 
                     
-                logsum += (np.log(1 - wordicity)-np.log(wordicity))
+                logsum += (np.log(1 - wordicity)-np.log(wordicity))#prevent overflow of floating number
                 print label+ 'icity of '+ word +':',wordicity
             scores[label] = 1 /(1+ np.exp(logsum))
         return scores
     def extractWinner(self,scores):
+        """
+        return the label with the best score
+        """
         bestscore = 0
         bestLabel = None
         for label in scores:
