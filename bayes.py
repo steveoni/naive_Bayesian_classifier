@@ -22,8 +22,8 @@ class Bayes(object):
         """
         find the unique character in asentance and turn into a list
         """
-         ar = set(a)
-         return list(ar)
+        ar = set(a)
+        return list(ar)
      
     def __stemKey(self,stem,label):
         """
